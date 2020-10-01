@@ -10,6 +10,12 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
     <title>TinyApp</title>
+    <style>
+        .table tr th,
+        .table tr td {
+            text-align: center;
+        }
+    </style>
 </head>
 
 
@@ -22,6 +28,9 @@
                     <tr>
                         <th scope="col">Short URL</th>
                         <th scope="col">Long URL</th>
+                        <th scope="col">Date Created</th>
+                        <th scope="col">Number of Visits</th>
+                        <th scope="col">Number of Unique Visitors</th>
                         <th scope="col">Edit</th>
                         <th scope="col">Delete</th>
                     </tr>
@@ -33,7 +42,16 @@
                                 <%= shortURL %>
                             </td>
                             <td>
-                                <%= idData[shortURL] %>
+                                <%= idData[shortURL].longURL %>
+                            </td>
+                            <td>
+                                <%= idData[shortURL].createDate %>
+                            </td>
+                            <td>
+                                <%= idData[shortURL].numOfVisits %>
+                            </td>
+                            <td>
+                                <%= idData[shortURL].uniVisits %>
                             </td>
                             <td>
                                 <form method="GET" action="/urls/<%= shortURL %>">

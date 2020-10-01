@@ -1,5 +1,6 @@
 // Server Setup
 const express = require('express');
+const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 8080;
 // ------------------------------------------------------------
@@ -27,18 +28,20 @@ const generateRandomString = () => {
 // ------------------------------------------------------------
 
 // helper function to test if users' email has already beeen registered
-const loginCheck = (userInput, userData, value) => {
-    return Object.keys(userData).filter(id => userData[id][value] === userInput[value])[0];
+const getUserByEmail = (email, userData) => {
+    return Object.keys(userData).filter(user => userData[user].email === email)[0];
 };
 // ------------------------------------------------------------
 
 // helper to test if either email or password is empty
 const emptyInput = (object) => {
+    let emptykey = [];
     for (let key in object) {
         if (object[key] === "") {
-            return key;
+            emptykey.push(key);
         }
     }
+    return emptykey;
 };
 // ------------------------------------------------------------
 
@@ -47,7 +50,7 @@ const urlsForUser = (id) => {
     let matchURL = {};
     Object.keys(urlDatabase).forEach(key => {
         if (urlDatabase[key].userID === id) {
-            matchURL[key] = urlDatabase[key].longURL;
+            matchURL[key] = urlDatabase[key];
         }
     });
     return matchURL;
@@ -75,57 +78,105 @@ const users = {
 // ------------------------------------------------------------
 class Client {
     constructor(id, email, password) {
-        this.id = id;
-        this.email = email;
-        this.password = password;
+        this._id = id;
+        this._email = email;
+        this._hashedPassword = bcrypt.hashSync(password, 10);
+    }
+    get id() {
+        return this._id;
+    }
+    get email() {
+        return this._email;
+    }
+    get hashedPassword() {
+        return this._hashedPassword;
     }
 }
 // ------------------------------------------------------------
 class ShortURL {
     constructor(longURL, userID) {
-        this.longURL = longURL;
-        this.userID = userID;
+        this._longURL = longURL;
+        this._userID = userID;
+        this._numOfVisits = 0;
+        this._createDate = new Date();
+        this._uniVisits = [];
     }
-}
+    get longURL() {
+        return this._longURL;
+    }
+    set longURL(url) {
+        this._longURL = url;
+    }
+    get userID() {
+        return this._userID;
+    }
+    get numOfVisits() {
+        return this._numOfVisits;
+    }
+    get createDate() {
+        return this._createDate;
+    }
+    get uniVisits() {
+        return this._uniVisits.length;
+    }
+    addNumberOfVisits() {
+        this._numOfVisits++;
+        return this;
+    }
+    addUniVisits(ip) {
+        if (!this._uniVisits.includes(ip)) {
+            this._uniVisits.push(ip);
+        }
+        return this;
+    }
+};
 // router list
 app.get(`/`, (req, res) => {
-    res.send(`Hello!`);
+    req.cookies[`user_id`] ? res.redirect('/urls') : res.redirect('/login');
 });
-app.get('/urls.json', (req, res) => {
-    res.json(urlDatabase);
-});
+
 // get request for register page
 app.get(`/register`, (req, res) => {
     const templateVars = { user: req.cookies['user_id'] };
-    res.render('urls_register', templateVars);
+    templateVars.user ? res.redirect('/urls') : res.render('urls_register', templateVars);
+
 });
 app.get(`/login`, (req, res) => {
     const templateVars = { user: req.cookies['user_id'] };
-    res.render('urls_login', templateVars);
+    templateVars.user ? res.redirect('/urls') : res.render('urls_login', templateVars);
 });
 // ------------------------------------------------------------
 app.post(`/login`, (req, res) => {
-    const checkIDByEmail = loginCheck(req.body, users, 'email');
-    if (checkIDByEmail && users[checkIDByEmail].password === req.body.password) {
-        res.cookie('user_id', users[checkIDByEmail], { expires: new Date(+new Date() + 900000), httpOnly: true });
-        res.redirect(`/urls`);
+    const { email, password } = req.body;
+    const findUser = getUserByEmail(email, users);
+    if (findUser) {
+        const hashed = users[findUser].hashedPassword;
+        const verifyPassword = bcrypt.compareSync(password, hashed);
+        if (verifyPassword) {
+            res.cookie('user_id', users[findUser], { expires: new Date(+new Date() + 900000), httpOnly: true });
+            res.redirect(`/urls`);
+        } else {
+            res.status(403).send('Password is incorrect!');
+        }
     } else {
-        res.status(403).send('Email/Password is incorrect');
+        res.status(403).send('Email does not exist!');
     }
 });
 // post request to add registration to data while clients submit register info
 app.post('/register', (req, res) => {
-    const emptyCheck = emptyInput(req.body);
-    if (emptyCheck) {
-        res.status(400).send(`Email/Password can not be empty`);
+    const emptyKey = emptyInput(req.body);
+    const { email, password } = req.body;
+    if (emptyKey.length) {
+        res.status(400).send(`${emptyKey.join(' & ')} can not be empty!`);
     } else {
-        const check = loginCheck(req.body, users, 'email');
-        if (check) {
+        const findUser = getUserByEmail(email, users);
+        if (findUser) {
             res.status(400).send('Email has been registered');
         } else {
             const id = generateRandomString();
-            const client = new Client(id, req.body.email, req.body.password);
+            const client = new Client(id, email, password);
             users[id] = client;
+            console.log(client);
             res.cookie('user_id', client, { expires: new Date(+new Date() + 900000), httpOnly: true });
             res.redirect('/urls');
         }
@@ -138,7 +189,7 @@ app.get('/urls', (req, res) => {
         const templateVars = { idData, user: req.cookies['user_id'] };
         res.render('urls_index', templateVars);
     } else {
-        res.redirect('/login');
+        res.send('Please login first!');
     }
 
 });
@@ -158,39 +209,54 @@ app.post('/urls', (req, res) => {
         urlDatabase[shortURL] = newURL;
         res.redirect(`/urls/${shortURL}`);
     } else {
-        res.redirect(403, '/login');
+        res.status(403).send('Please login first!');
     }
 });
 app.get('/u/:shortURL', (req, res) => {
-    const longURL = urlDatabase[req.params.shortURL].longURL;
-    res.redirect(longURL);
+    if (urlDatabase[req.params.shortURL]) {
+        const urlInfo = urlDatabase[req.params.shortURL];
+        const longURL = urlInfo.longURL;
+        urlInfo.addNumberOfVisits().addUniVisits(req.ip);
+        res.redirect(longURL);
+    } else {
+        res.status(403).send('The shortURL you\'re attempting to visit doesn\'t exist!!!');
+    }
 });
 app.get('/urls/:shortURL', (req, res) => {
     if (!req.cookies['user_id']) {
-        res.redirect('/login');
-    } else if (!urlDatabase[req.params.shortURL] || req.cookies['user_id'].id !== urlDatabase[req.params.shortURL].userID) {
-        res.status(403).send('You are trying to access without permission!');
+        res.status(403).send('Please login first');
+    } else if (!urlDatabase[req.params.shortURL]) {
+        res.status(403).send('The shortURL you\'re attempting to visit doesn\'t exist!!!');
+    } else if (req.cookies['user_id'].id !== urlDatabase[req.params.shortURL].userID) {
+        res.status(403).send('You are trying to access this shortURL without permission!');
     } else {
         const idData = urlsForUser(req.cookies[`user_id`].id);
-        const templateVars = { shortURL: req.params.shortURL, longURL: idData[req.params.shortURL], user: req.cookies['user_id'] };
+        const shortURL = req.params.shortURL;
+        const info = idData[shortURL];
+        const user = req.cookies[`user_id`];
+        const templateVars = { shortURL, info, user };
         res.render('urls_show', templateVars);
     }
 
 });
 app.post('/urls/:shortURL', (req, res) => {
-    if (req.cookies['user_id'] && urlDatabase[req.params.shortURL] && req.cookies['user_id'].id === urlDatabase[req.params.shortURL].userID) {
+    if (!req.cookies['user_id']) {
+        res.status(403).send('Please login first');
+    } else if (!urlDatabase[req.params.shortURL] || req.cookies['user_id'].id !== urlDatabase[req.params.shortURL].userID) {
+        res.status(403).send('You are not allowed to change the URL without permission!');
+    } else {
         urlDatabase[req.params.shortURL].longURL = req.body.longURL;
         res.redirect(`/urls`);
-    } else {
-        res.status(403).send('You are trying to access without permission!');
     }
 });
 app.post(`/urls/:shortURL/delete`, (req, res) => {
-    if (req.cookies['user_id'] && urlDatabase[req.params.shortURL] && req.cookies['user_id'].id === urlDatabase[req.params.shortURL].userID) {
-        delete urlDatabase[req.params.shortURL];
-        res.redirect('/urls');
+    if (!req.cookies['user_id']) {
+        res.status(403).send('Please login first');
+    } else if (!urlDatabase[req.params.shortURL] || req.cookies['user_id'].id !== urlDatabase[req.params.shortURL].userID) {
+        res.status(403).send('You are not allowed to delete this URL without permission!');
     } else {
-        res.status(403).send('You are trying to access without permission!');
+        delete urlDatabase[req.params.shortURL];
+        res.redirect(`/urls`);
     }
 });
 
