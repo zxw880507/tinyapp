@@ -41,10 +41,21 @@ const emptyInput = (object) => {
     }
 };
 // ------------------------------------------------------------
+
+//urlsForUser(id)
+const urlsForUser = (id) => {
+    let matchURL = {};
+    Object.keys(urlDatabase).forEach(key => {
+        if (urlDatabase[key].userID === id) {
+            matchURL[key] = urlDatabase[key].longURL;
+        }
+    });
+    return matchURL;
+};
 // url database
 const urlDatabase = {
-    b6UTxQ: { longURL: "https://www.tsn.ca", userID: "default" },
-    i3BoGr: { longURL: "https://www.google.ca", userID: "default" }
+    b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
+    i3BoGr: { longURL: "https://www.google.ca", userID: "aJ48lW" }
 };
 // ------------------------------------------------------------
 
@@ -123,7 +134,8 @@ app.post('/register', (req, res) => {
 // ------------------------------------------------------------
 app.get('/urls', (req, res) => {
     if (req.cookies[`user_id`]) {
-        const templateVars = { urlDatabase, user: req.cookies['user_id'] };
+        const idData = urlsForUser(req.cookies[`user_id`].id);
+        const templateVars = { idData, user: req.cookies['user_id'] };
         res.render('urls_index', templateVars);
     } else {
         res.redirect('/login');
@@ -131,30 +143,55 @@ app.get('/urls', (req, res) => {
 
 });
 app.get("/urls/new", (req, res) => {
-    const templateVars = { user: req.cookies['user_id'] };
-    res.render("urls_new", templateVars);
+    if (req.cookies['user_id']) {
+        const templateVars = { user: req.cookies['user_id'] };
+        res.render("urls_new", templateVars);
+    } else {
+        res.redirect('/login');
+    }
+
 });
 app.post('/urls', (req, res) => {
-    const shortURL = generateRandomString();
-    const newURL = new ShortURL(req.body.longURL, req.cookies['user_id'].id);
-    urlDatabase[shortURL] = newURL;
-    res.redirect(`/urls/${shortURL}`);
+    if (req.cookies['user_id']) {
+        const shortURL = generateRandomString();
+        const newURL = new ShortURL(req.body.longURL, req.cookies['user_id'].id);
+        urlDatabase[shortURL] = newURL;
+        res.redirect(`/urls/${shortURL}`);
+    } else {
+        res.redirect(403, '/login');
+    }
 });
 app.get('/u/:shortURL', (req, res) => {
     const longURL = urlDatabase[req.params.shortURL].longURL;
     res.redirect(longURL);
 });
 app.get('/urls/:shortURL', (req, res) => {
-    const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: req.cookies['user_id'] };
-    res.render('urls_show', templateVars);
+    if (!req.cookies['user_id']) {
+        res.redirect('/login');
+    } else if (!urlDatabase[req.params.shortURL] || req.cookies['user_id'].id !== urlDatabase[req.params.shortURL].userID) {
+        res.status(403).send('You are trying to access without permission!');
+    } else {
+        const idData = urlsForUser(req.cookies[`user_id`].id);
+        const templateVars = { shortURL: req.params.shortURL, longURL: idData[req.params.shortURL], user: req.cookies['user_id'] };
+        res.render('urls_show', templateVars);
+    }
+
 });
 app.post('/urls/:shortURL', (req, res) => {
-    urlDatabase[req.params.shortURL].longURL = req.body.longURL;
-    res.redirect(`/urls`);
+    if (req.cookies['user_id'] && urlDatabase[req.params.shortURL] && req.cookies['user_id'].id === urlDatabase[req.params.shortURL].userID) {
+        urlDatabase[req.params.shortURL].longURL = req.body.longURL;
+        res.redirect(`/urls`);
+    } else {
+        res.status(403).send('You are trying to access without permission!');
+    }
 });
 app.post(`/urls/:shortURL/delete`, (req, res) => {
-    delete urlDatabase[req.params.shortURL];
-    res.redirect('/urls');
+    if (req.cookies['user_id'] && urlDatabase[req.params.shortURL] && req.cookies['user_id'].id === urlDatabase[req.params.shortURL].userID) {
+        delete urlDatabase[req.params.shortURL];
+        res.redirect('/urls');
+    } else {
+        res.status(403).send('You are trying to access without permission!');
+    }
 });
 
 app.post(`/logout`, (req, res) => {

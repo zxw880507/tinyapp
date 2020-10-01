@@ -27,34 +27,28 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <% for(let shortURL in urlDatabase) { 
-                        if (urlDatabase[shortURL].userID === 'default' || urlDatabase[shortURL].userID === user.id) { %>
+                    <% for(let shortURL in idData) { %>
                         <tr>
                             <td>
                                 <%= shortURL %>
                             </td>
                             <td>
-                                <%= urlDatabase[shortURL].longURL %>
+                                <%= idData[shortURL] %>
                             </td>
-                            <% if (user && urlDatabase[shortURL].userID === user.id) {%>
-                                <td>
-                                    <form method="GET" action="/urls/<%= shortURL %>">
-                                        <button type="submit" style="color: skyblue; border: 1px solid skyblue; background: transparent; box-shadow: none; border-radius: 3px;">Edit</button>
-                                    </form>
+                            <td>
+                                <form method="GET" action="/urls/<%= shortURL %>">
+                                    <button type="submit" style="color: skyblue; border: 1px solid skyblue; background: transparent; box-shadow: none; border-radius: 3px;">Edit</button>
+                                </form>
 
-                                </td>
-                                <td>
-                                    <form method="POST" action="/urls/<%= shortURL %>/delete">
-                                        <button type="submit" style="color: red; border: 1px solid red; background: transparent; box-shadow: none; border-radius: 3px;">Delete</button>
-                                    </form>
-                                </td>
-                                <%} else {%>
-                                    <td></td>
-                                    <td></td>
-                                    <%}%>
+                            </td>
+                            <td>
+                                <form method="POST" action="/urls/<%= shortURL %>/delete">
+                                    <button type="submit" style="color: red; border: 1px solid red; background: transparent; box-shadow: none; border-radius: 3px;">Delete</button>
+                                </form>
+                            </td>
+
                         </tr>
                         <% } %>
-                            <% } %>
                 </tbody>
             </table>
 
