@@ -16,7 +16,9 @@ const PORT = 8080;
 // middlewire setup
 const bodyParser = require("body-parser");
 const cookieSession = require('cookie-session');
+const methodOverride = require('method-override');
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(methodOverride('_method'));
 app.use(cookieSession({
   name: 'session',
   keys: ['some-secret-key', 'a-very-long-secret-key']
@@ -135,7 +137,7 @@ app.post('/urls', (req, res) => {
     res.status(403).send('Please login first!');
   }
 });
-// redirect to a short-related longURL
+// redirect to a longURL by shortURL
 app.get('/u/:shortURL', (req, res) => {
   const { shortURL } = req.params;
   if (urlDatabase[shortURL]) {
@@ -166,8 +168,8 @@ app.get('/urls/:shortURL', (req, res) => {
   }
 
 });
-// post request to modify a longURL
-app.post('/urls/:shortURL', (req, res) => {
+// put request to modify a longURL
+app.put('/urls/:shortURL', (req, res) => {
   const sessID = req.session.userID;
   const { shortURL } = req.params;
   if (!users[sessID]) {
@@ -180,7 +182,7 @@ app.post('/urls/:shortURL', (req, res) => {
   }
 });
 // post request to delete a shortURL
-app.post(`/urls/:shortURL/delete`, (req, res) => {
+app.delete(`/urls/:shortURL`, (req, res) => {
   const sessID = req.session.userID;
   const { shortURL } = req.params;
   if (!users[sessID]) {
