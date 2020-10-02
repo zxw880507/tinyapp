@@ -6,7 +6,8 @@ TinyApp is a full stack web application built with Node and Express that allows 
 - response 403 with message reports either email or password is empty, or both after commited a falsey register
 - display the date of each shortURL created
 - shows the number of times a given shortURL was visited
-- shows the number of unique visits on a given shortURL based on the request IP address 
+- shows the number of unique visits on a given shortURL based on the request IP address
+- server is RESTful 
 ## Final Product
 
 !["screenshot of register page"](https://github.com/zxw880507/tinyapp/blob/master/docs/register-page.png?raw=true)
@@ -20,6 +21,7 @@ TinyApp is a full stack web application built with Node and Express that allows 
 - bcrypt
 - body-parser
 - cookie-session
+- method-override
 - [optional] mocha & chai (test helpers function)
 
 ## Getting Started
