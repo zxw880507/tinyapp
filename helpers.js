@@ -68,7 +68,7 @@ class ShortURL {
     return this._longURL;
   }
   set longURL(url) {
-    this._longURL = url;
+    url ? this._longURL = url : this._longURL;
   }
   get userID() {
     return this._userID;
