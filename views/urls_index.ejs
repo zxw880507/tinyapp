@@ -39,29 +39,27 @@
                     <% for(let shortURL in idData) { %>
                         <tr>
                             <td>
-                                <%= shortURL %>
+                                <span><%= shortURL %></span>
                             </td>
                             <td>
-                                <%= idData[shortURL].longURL %>
+                                <span><%= idData[shortURL].longURL %></span>
                             </td>
                             <td>
-                                <%= idData[shortURL].createDate %>
+                                <span><%= idData[shortURL].createDate %></span>
                             </td>
                             <td>
-                                <%= idData[shortURL].numOfVisits %>
+                                <span><%= idData[shortURL].numOfVisits %></span>
                             </td>
                             <td>
-                                <%= idData[shortURL].uniVisits %>
+                                <span><%= idData[shortURL].uniVisits %></span>
                             </td>
                             <td>
-                                <form method="GET" action="/urls/<%= shortURL %>">
-                                    <button type="submit" style="color: skyblue; border: 1px solid skyblue; background: transparent; box-shadow: none; border-radius: 3px;">Edit</button>
-                                </form>
+                                <a href="/urls/<%= shortURL %>" style="color: skyblue; border: 1px solid skyblue; background: transparent; box-shadow: none; border-radius: 3px; text-decoration: none; width: 3.5rem; height: 1.75rem; display: block; padding: 0.0625rem 0.375rem; text-align: center;">Edit</a>
 
                             </td>
                             <td>
-                                <form method="POST" action="/urls/<%= shortURL %>/delete">
-                                    <button type="submit" style="color: red; border: 1px solid red; background: transparent; box-shadow: none; border-radius: 3px;">Delete</button>
+                                <form method="POST" action="/urls/<%= shortURL %>?_method=DELETE">
+                                    <button type="submit" style="color: red; border: 1px solid red; background: transparent; box-shadow: none; border-radius: 3px; cursor: pointer;">Delete</button>
                                 </form>
                             </td>
 
